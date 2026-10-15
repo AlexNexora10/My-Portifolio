@@ -2,6 +2,17 @@
 "use strict";
 
 /* =========================================
+   EMAILJS INITIALIZATION
+========================================= */
+
+if (typeof emailjs !== "undefined") {
+  emailjs.init({
+    publicKey: "vZwyap-kFYZY6AhLC"
+  });
+}
+
+
+/* =========================================
    1. MOBILE NAVIGATION
 ========================================= */
 
@@ -55,7 +66,6 @@ if (menuToggle && navLinks) {
     }
   });
 
-  // Close mobile menu when changing to desktop layout.
   window.addEventListener("resize", () => {
     if (window.innerWidth > 850) {
       closeMenu();
@@ -141,7 +151,6 @@ function typeEffect() {
 
   if (!deleting) {
     characterIndex++;
-
     typingText.textContent = currentTitle.slice(0, characterIndex);
 
     if (characterIndex >= currentTitle.length) {
@@ -151,7 +160,6 @@ function typeEffect() {
     }
   } else {
     characterIndex--;
-
     typingText.textContent = currentTitle.slice(0, characterIndex);
 
     if (characterIndex <= 0) {
@@ -171,7 +179,6 @@ if (typingText) {
   }
 }
 
-// Respect changes to the operating system's motion preference.
 prefersReducedMotion.addEventListener?.("change", (event) => {
   if (!typingText) return;
 
@@ -223,14 +230,14 @@ filterButtons.forEach((button) => {
 });
 
 /* =========================================
-   5. CONTACT FORM
+   5. CONTACT FORM WITH EMAILJS
 ========================================= */
 
 const contactForm = document.getElementById("contact-form");
 const formStatus = document.getElementById("form-status");
 
 if (contactForm && formStatus) {
-  contactForm.addEventListener("submit", (event) => {
+  contactForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     formStatus.textContent = "";
@@ -247,7 +254,8 @@ if (contactForm && formStatus) {
     const messageInput = document.getElementById("message");
 
     if (!nameInput || !emailInput || !subjectInput || !messageInput) {
-      formStatus.textContent = "The contact form fields could not be found.";
+      formStatus.textContent =
+        "The contact form fields could not be found.";
       formStatus.classList.add("error");
       return;
     }
@@ -269,38 +277,70 @@ if (contactForm && formStatus) {
       return;
     }
 
-    /*
-      Replace this placeholder with your actual email address.
-      Example: alex@example.com
-    */
-    const recipient = "YOUR_EMAIL@example.com";
-
-    if (
-      recipient === "YOUR_EMAIL@example.com" ||
-      !recipient.includes("@")
-    ) {
+    if (typeof emailjs === "undefined") {
       formStatus.textContent =
-        "Please configure your recipient email in script.js first.";
+        "Email service is unavailable. Please refresh and try again.";
       formStatus.classList.add("error");
       return;
     }
 
-    const emailSubject = encodeURIComponent(subject);
-
-    const emailBody = encodeURIComponent(
-      `Name: ${name}\n` +
-      `Sender email: ${email}\n\n` +
-      `Message:\n${message}`
+    const submitButton = contactForm.querySelector(
+      'button[type="submit"], input[type="submit"]'
     );
 
-    const mailtoLink =
-      `mailto:${recipient}?subject=${emailSubject}&body=${emailBody}`;
+    const originalButtonText = submitButton
+      ? submitButton.tagName === "INPUT"
+        ? submitButton.value
+        : submitButton.textContent
+      : "";
 
-    formStatus.textContent =
-      "Opening your email application. Send the prepared message to complete delivery.";
-    formStatus.classList.add("success");
+    if (submitButton) {
+      submitButton.disabled = true;
 
-    window.location.href = mailtoLink;
+      if (submitButton.tagName === "INPUT") {
+        submitButton.value = "Sending...";
+      } else {
+        submitButton.textContent = "Sending...";
+      }
+    }
+
+    formStatus.textContent = "Sending your message...";
+    formStatus.className = "form-status";
+
+    try {
+      await emailjs.send(
+        "service_nruuhev",
+        "template_idk39pz",
+        {
+          name: name,
+          email: email,
+          subject: subject,
+          message: message
+        }
+      );
+
+      formStatus.textContent =
+        "Message sent successfully! Thank you for contacting me.";
+      formStatus.classList.add("success");
+
+      contactForm.reset();
+    } catch (error) {
+      console.error("EmailJS sending error:", error);
+
+      formStatus.textContent =
+        "Message could not be sent. Please try again.";
+      formStatus.classList.add("error");
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+
+        if (submitButton.tagName === "INPUT") {
+          submitButton.value = originalButtonText;
+        } else {
+          submitButton.textContent = originalButtonText;
+        }
+      }
+    }
   });
 }
 
@@ -354,7 +394,9 @@ if ("IntersectionObserver" in window && sections.length > 0) {
     (entries) => {
       const visibleSections = entries
         .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        .sort(
+          (a, b) => b.intersectionRatio - a.intersectionRatio
+        );
 
       if (visibleSections.length > 0) {
         setActiveNavigation(visibleSections[0].target.id);
